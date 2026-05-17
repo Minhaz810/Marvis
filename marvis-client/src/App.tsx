@@ -1,11 +1,29 @@
-function App() {
+import type { ReactElement } from 'react'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { ProtectedRoute } from './components/ProtectedRoute'
+import { DashboardPage } from './pages/DashboardPage'
+import { HomePage } from './pages/HomePage'
+import { LoginPage } from './pages/LoginPage'
+import { RegisterPage } from './pages/RegisterPage'
+
+function App(): ReactElement {
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
-      <div className="text-center space-y-4">
-        <h1 className="text-5xl font-bold tracking-tight">Marvis</h1>
-        <p className="text-gray-400 text-lg">Your personal AI assistant</p>
-      </div>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
 

@@ -19,7 +19,7 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
       parserOptions: {
-        project: true,
+        project: ['./tsconfig.app.json', './tsconfig.node.json'],
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -30,6 +30,7 @@ export default defineConfig([
       '@typescript-eslint/explicit-function-return-type': 'error',
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
+      '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
     },
   },
 ])

@@ -1,3 +1,5 @@
-USER_NOT_FOUND = "User not found."
-USER_ALREADY_EXISTS = "A user with this email already exists."
-INVALID_CREDENTIALS = "Invalid email or password."
+USERNAME_NOT_FOUND = "User not found."
+USERNAME_ALREADY_EXISTS = "A user with this username already exists."
+INVALID_CREDENTIALS = "Invalid username or password."
+PASSWORDS_DO_NOT_MATCH = "Passwords do not match."
+INVALID_REFRESH_TOKEN = "Invalid or expired refresh token."

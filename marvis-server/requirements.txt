@@ -2,11 +2,11 @@ fastapi
 uvicorn[standard]
 pydantic-settings
 pydantic[email]
-sqlalchemy
+sqlalchemy[asyncio]
 asyncpg
 alembic
 python-jose[cryptography]
-passlib[bcrypt]
+bcrypt
 
 ruff
 pre-commit

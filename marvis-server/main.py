@@ -1,17 +1,15 @@
-from contextlib import asynccontextmanager
-
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from auth.v1.router import router as auth_router
-from config.database import init_db
 
+app = FastAPI(title="Marvis", version="1.0.0")
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    await init_db()
-    yield
-
-
-app = FastAPI(title="Marvis", version="1.0.0", lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
