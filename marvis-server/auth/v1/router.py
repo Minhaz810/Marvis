@@ -3,6 +3,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from auth.models import User
+from auth.v1.dependencies import get_current_user
 from auth.v1.schema import (
     LoginRequest,
     RefreshRequest,
@@ -54,7 +56,7 @@ async def logout(payload: RefreshRequest, db: AsyncSession = Depends(get_db)) ->
     await AuthService(db).revoke_refresh_token(payload.refresh_token)
 
 
-@router.get("/me/{user_id}", response_model=UserResponse)
-async def get_me(user_id: int, db: AsyncSession = Depends(get_db)) -> UserResponse:
+@router.get("/me", response_model=UserResponse)
+async def get_me(current_user: User = Depends(get_current_user)) -> UserResponse:
     """Return the profile of the authenticated user."""
-    return await AuthService(db).get_by_id(user_id)  # type: ignore[return-value]
+    return current_user  # type: ignore[return-value]
