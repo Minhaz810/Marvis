@@ -1,0 +1,20 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.4
+    hooks:
+      - id: ruff
+        name: Ruff lint (marvis-server)
+        args: [--fix]
+        files: ^marvis-server/
+      - id: ruff-format
+        name: Ruff format (marvis-server)
+        files: ^marvis-server/
+
+  - repo: local
+    hooks:
+      - id: eslint
+        name: ESLint (marvis-client)
+        language: system
+        entry: bash -c 'cd marvis-client && npm run lint'
+        files: ^marvis-client/.*\.(ts|tsx)$
+        pass_filenames: false
