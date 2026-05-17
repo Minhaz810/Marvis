@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactElement } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
+import { getAccessToken } from '../api/auth'
 import { MarvisOrb } from '../components/MarvisOrb'
 
 const gridStyle: CSSProperties = {
@@ -10,6 +11,10 @@ const gridStyle: CSSProperties = {
 
 export function HomePage(): ReactElement {
   const navigate = useNavigate()
+
+  if (getAccessToken()) {
+    return <Navigate to="/dashboard" replace />
+  }
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center gap-14 overflow-hidden relative">
