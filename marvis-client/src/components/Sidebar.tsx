@@ -1,9 +1,8 @@
 import {
   CalendarDays,
-  ChevronLeft,
-  ChevronRight,
   History,
   LogOut,
+  Menu,
   MessagesSquare,
   Settings2,
   ShieldCheck,
@@ -34,22 +33,14 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps): ReactElement {
       className="relative flex flex-col h-screen bg-gray-900 border-r border-gray-800 transition-all duration-300 shrink-0"
       style={{ width: collapsed ? '64px' : '240px' }}
     >
-      {/* Toggle button */}
-      <button
-        onClick={onToggle}
-        className="absolute -right-3 top-6 z-10 flex items-center justify-center w-6 h-6 rounded-full bg-gray-800 border border-gray-700 text-gray-400 hover:text-cyan-400 hover:border-cyan-500 transition-colors"
-      >
-        {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
-      </button>
-
-      {/* Logo area */}
+      {/* Logo area with hamburger toggle */}
       <div className="flex items-center gap-3 px-4 py-5 border-b border-gray-800 overflow-hidden">
-        <span
-          className="text-cyan-400 font-bold text-lg shrink-0"
-          style={{ textShadow: '0 0 12px rgba(6,182,212,0.7)' }}
+        <button
+          onClick={onToggle}
+          className="shrink-0 text-gray-400 hover:text-cyan-400 transition-colors cursor-pointer"
         >
-          M
-        </span>
+          <Menu size={20} />
+        </button>
         {!collapsed && (
           <span className="text-white font-semibold tracking-wide whitespace-nowrap">
             Marvis
