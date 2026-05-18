@@ -31,7 +31,7 @@ class AuthService:
         """Initialise with an async database session."""
         self.db = db
 
-    async def get_by_id(self, user_id: int) -> User:
+    async def get_user_by_id(self, user_id: int) -> User:
         """Return a user by ID, raising HTTP 404 if not found."""
         result = await self.db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
@@ -41,7 +41,7 @@ class AuthService:
             )
         return user
 
-    async def get_by_username(self, username: str) -> User | None:
+    async def get_user_by_username(self, username: str) -> User | None:
         """Return a user by username, or None if not found."""
         result = await self.db.execute(select(User).where(User.username == username))
         return result.scalar_one_or_none()
@@ -52,7 +52,7 @@ class AuthService:
         Raises HTTP 409 if the username is already taken.
         Stores only the hashed password — confirm_password is never persisted.
         """
-        if await self.get_by_username(payload.username):
+        if await self.get_user_by_username(payload.username):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT, detail=USERNAME_ALREADY_EXISTS
             )
@@ -71,7 +71,7 @@ class AuthService:
         Returns a tuple of (access_token, refresh_token).
         Raises HTTP 401 on invalid credentials.
         """
-        user = await self.get_by_username(username)
+        user = await self.get_user_by_username(username)
         if not user or not verify_password(password, user.hashed_password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail=INVALID_CREDENTIALS
@@ -91,7 +91,9 @@ class AuthService:
         )
         await self.db.commit()
 
-        access_token = create_access_token({"sub": str(user.id)})
+        access_token = create_access_token(
+            {"sub": str(user.id), "username": user.username}
+        )
         return access_token, raw_token
 
     async def refresh(self, raw_token: str) -> tuple[str, str]:
@@ -129,7 +131,10 @@ class AuthService:
         )
         await self.db.commit()
 
-        access_token = create_access_token({"sub": str(stored.user_id)})
+        user = await self.get_user_by_id(stored.user_id)
+        access_token = create_access_token(
+            {"sub": str(user.id), "username": user.username}
+        )
         return access_token, new_raw
 
     async def revoke_refresh_token(self, raw_token: str) -> None:

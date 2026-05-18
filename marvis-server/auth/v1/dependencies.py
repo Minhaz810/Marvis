@@ -37,4 +37,4 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         ) from err
 
-    return await AuthService(db).get_by_id(int(user_id))
+    return await AuthService(db).get_user_by_id(int(user_id))
