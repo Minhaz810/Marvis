@@ -49,6 +49,16 @@ Send a message on any supported platform → Marvis understands your intent → 
 
 > More integrations coming soon.
 
+## Architecture & Design
+
+The user flow, system architecture, and database schema diagrams are available here:
+
+**[View Diagrams →](https://app.diagrams.net/#G1T_mHKvWyPq3rXAd0ExpZkTVwEt9vhrED#%7B%22pageId%22%3A%22QfA07C8Jof4Y4qBS3fAS%22%7D)**
+
+> Includes: User Flow · System Architecture · Database Schema
+
+---
+
 ## Project Structure
 
 ```
