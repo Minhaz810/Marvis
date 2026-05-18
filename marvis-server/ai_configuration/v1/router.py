@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ai_configuration.v1.schema import LLMProviderResponse
+from ai_configuration.v1.schema import LLMModelResponse, LLMProviderResponse
 from ai_configuration.v1.services import AIConfigurationService
 from auth.models import User
 from auth.v1.dependencies import get_current_user
@@ -26,4 +26,22 @@ async def list_providers(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while fetching providers.",
+        ) from exc
+
+
+@router.get("/providers/{provider_name}/models", response_model=list[LLMModelResponse])
+async def list_models_by_provider(
+    provider_name: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[LLMModelResponse]:
+    """Return all models for the given provider."""
+    try:
+        return await AIConfigurationService(db).get_models_by_provider(provider_name)  # type: ignore[return-value]
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while fetching models.",
         ) from exc
