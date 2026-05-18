@@ -91,7 +91,9 @@ class AuthService:
         )
         await self.db.commit()
 
-        access_token = create_access_token({"sub": str(user.id)})
+        access_token = create_access_token(
+            {"sub": str(user.id), "username": user.username}
+        )
         return access_token, raw_token
 
     async def refresh(self, raw_token: str) -> tuple[str, str]:
@@ -129,7 +131,10 @@ class AuthService:
         )
         await self.db.commit()
 
-        access_token = create_access_token({"sub": str(stored.user_id)})
+        user = await self.get_user_by_id(stored.user_id)
+        access_token = create_access_token(
+            {"sub": str(user.id), "username": user.username}
+        )
         return access_token, new_raw
 
     async def revoke_refresh_token(self, raw_token: str) -> None:
