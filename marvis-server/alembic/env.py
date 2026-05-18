@@ -5,12 +5,11 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+import ai_configuration.models  # noqa: F401
+import auth.models  # noqa: F401
 from alembic import context
-
 from config.database import Base
 from config.settings import settings
-
-import auth.models  # noqa: F401
 
 config = context.config
 
