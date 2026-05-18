@@ -25,9 +25,11 @@ const NAV_ITEMS: NavItem[] = [
 interface SidebarProps {
   collapsed: boolean
   onToggle: () => void
+  activeItem: string
+  onNavClick: (label: string) => void
 }
 
-export function Sidebar({ collapsed, onToggle }: SidebarProps): ReactElement {
+export function Sidebar({ collapsed, onToggle, activeItem, onNavClick }: SidebarProps): ReactElement {
   return (
     <aside
       className="relative flex flex-col h-screen bg-gray-900 border-r border-gray-800 transition-all duration-300 shrink-0"
@@ -50,20 +52,28 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps): ReactElement {
 
       {/* Nav items */}
       <nav className="flex-1 py-4 overflow-hidden">
-        {NAV_ITEMS.map(({ label, icon }) => (
-          <button
-            key={label}
-            className="w-full flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors group"
-            title={collapsed ? label : undefined}
-          >
-            <span className="shrink-0 group-hover:text-cyan-400 transition-colors">
-              {icon}
-            </span>
-            {!collapsed && (
-              <span className="text-sm whitespace-nowrap">{label}</span>
-            )}
-          </button>
-        ))}
+        {NAV_ITEMS.map(({ label, icon }) => {
+          const isActive = activeItem === label
+          return (
+            <button
+              key={label}
+              onClick={() => { onNavClick(label) }}
+              className={`w-full flex items-center gap-3 px-4 py-3 transition-colors group cursor-pointer border-l-2 ${
+                isActive
+                  ? 'border-cyan-400 bg-cyan-500/10 text-cyan-400'
+                  : 'border-transparent text-gray-400 hover:text-white hover:bg-gray-800'
+              }`}
+              title={collapsed ? label : undefined}
+            >
+              <span className={`shrink-0 transition-colors ${isActive ? 'text-cyan-400' : 'group-hover:text-cyan-400'}`}>
+                {icon}
+              </span>
+              {!collapsed && (
+                <span className="text-sm whitespace-nowrap">{label}</span>
+              )}
+            </button>
+          )
+        })}
       </nav>
 
       {/* Bottom section */}
