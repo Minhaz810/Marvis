@@ -68,7 +68,7 @@ class AIConfigurationService:
         model_result = await self.db.execute(
             select(LLMModel).where(
                 LLMModel.id == payload.llm_model_id, LLMModel.is_active == True
-            )  # noqa: E712
+            )
         )
         model = model_result.scalar_one_or_none()
         if not model:
