@@ -49,6 +49,9 @@ class UserAIConfigResponse(BaseModel):
     api_key: str
     max_tokens: int
     is_active: bool
+    model_name: str
+    provider_name: str
+    model_type: ModelType
     created_at: datetime
     updated_at: datetime
 

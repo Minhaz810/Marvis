@@ -57,17 +57,41 @@ class AIConfigurationService:
         )
         return list(models_result.scalars().all())
 
-    async def save_user_config(
-        self, user_id: int, payload: UserAIConfigCreate
-    ) -> UserAIConfig:
+    async def _enrich_config(self, config: UserAIConfig) -> dict:
+        """Attach model_name, provider_name, and model_type to a config dict."""
+        model_result = await self.db.execute(
+            select(LLMModel).where(LLMModel.id == config.llm_model_id)
+        )
+        model = model_result.scalar_one()
+        provider_result = await self.db.execute(
+            select(LLMProvider).where(LLMProvider.id == model.provider_id)
+        )
+        provider = provider_result.scalar_one()
+        return {
+            "id": config.id,
+            "llm_model_id": config.llm_model_id,
+            "user_id": config.user_id,
+            "api_key": config.api_key,
+            "max_tokens": config.max_tokens,
+            "is_active": config.is_active,
+            "model_name": model.model_name,
+            "provider_name": provider.provider_name,
+            "model_type": provider.model_type,
+            "created_at": config.created_at,
+            "updated_at": config.updated_at,
+        }
+
+    async def save_user_config(self, user_id: int, payload: UserAIConfigCreate) -> dict:
         """Create or update the AI configuration for a user.
+
         Validates that the model exists and that an API key is provided
-        for cloud models.If the user already has a config, it is updated
+        for cloud models. If the user already has a config, it is updated
         in place.
         """
         model_result = await self.db.execute(
             select(LLMModel).where(
-                LLMModel.id == payload.llm_model_id, LLMModel.is_active == True
+                LLMModel.id == payload.llm_model_id,
+                LLMModel.is_active == True,  # noqa: E712
             )
         )
         model = model_result.scalar_one_or_none()
@@ -101,7 +125,7 @@ class AIConfigurationService:
             existing.max_tokens = payload.max_tokens
             await self.db.commit()
             await self.db.refresh(existing)
-            return existing
+            return await self._enrich_config(existing)
 
         config = UserAIConfig(
             user_id=user_id,
@@ -113,9 +137,9 @@ class AIConfigurationService:
         self.db.add(config)
         await self.db.commit()
         await self.db.refresh(config)
-        return config
+        return await self._enrich_config(config)
 
-    async def get_user_config(self, user_id: int) -> UserAIConfig:
+    async def get_user_config(self, user_id: int) -> dict:
         """Return the AI configuration for a user.
 
         Raises HTTP 404 if no configuration exists.
@@ -128,4 +152,4 @@ class AIConfigurationService:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail=USER_CONFIG_NOT_FOUND
             )
-        return config
+        return await self._enrich_config(config)
