@@ -1,35 +1,69 @@
 import { Eye, EyeOff } from 'lucide-react'
 import type { ReactElement } from 'react'
-import { useState } from 'react'
-import type { LLMModel, Provider } from '../api/aiConfiguration'
-import { getModelsByProvider, getProvidersByType } from '../api/aiConfiguration'
+import { useEffect, useState } from 'react'
+import type { LLMModel, Provider, UserAIConfig } from '../api/aiConfiguration'
+import {
+  getModelsByProvider,
+  getProvidersByType,
+  getUserConfig,
+  saveUserConfig,
+} from '../api/aiConfiguration'
 import { Dropdown } from '../components/Dropdown'
+
+type PageState = 'loading' | 'empty' | 'configuring' | 'configured'
 
 const MODEL_TYPE_OPTIONS = [
   { value: 'cloud', label: 'Cloud' },
   { value: 'local', label: 'Local' },
 ]
 
+function maskApiKey(key: string): string {
+  if (!key) return ''
+  if (key.length <= 4) return key
+  return '*'.repeat(Math.min(key.length - 4, 24)) + key.slice(-4)
+}
+
 export function ConfigureAIPage(): ReactElement {
+  const [pageState, setPageState] = useState<PageState>('loading')
+  const [existingConfig, setExistingConfig] = useState<UserAIConfig | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
   const [selectedType, setSelectedType] = useState<'local' | 'cloud' | ''>('')
   const [providers, setProviders] = useState<Provider[]>([])
   const [selectedProvider, setSelectedProvider] = useState<string>('')
   const [models, setModels] = useState<LLMModel[]>([])
-  const [selectedModel, setSelectedModel] = useState<string>('')
+  const [selectedModelId, setSelectedModelId] = useState<string>('')
   const [loadingProviders, setLoadingProviders] = useState(false)
   const [loadingModels, setLoadingModels] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
   const [apiKey, setApiKey] = useState('')
   const [showApiKey, setShowApiKey] = useState(false)
   const [maxTokens, setMaxTokens] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+
+  useEffect(() => {
+    void (async (): Promise<void> => {
+      try {
+        const config = await getUserConfig()
+        if (config === null) {
+          setPageState('empty')
+        } else {
+          setExistingConfig(config)
+          setPageState('configured')
+        }
+      } catch {
+        setLoadError('Failed to load configuration.')
+        setPageState('empty')
+      }
+    })()
+  }, [])
 
   function handleTypeChange(type: string): void {
     setSelectedType(type as 'local' | 'cloud')
     setProviders([])
     setSelectedProvider('')
     setModels([])
-    setSelectedModel('')
+    setSelectedModelId('')
     if (!type) return
     setLoadingProviders(true)
     void (async (): Promise<void> => {
@@ -37,7 +71,7 @@ export function ConfigureAIPage(): ReactElement {
         const data = await getProvidersByType(type as 'local' | 'cloud')
         setProviders(data)
       } catch {
-        setError('Failed to load providers.')
+        setFormError('Failed to load providers.')
       } finally {
         setLoadingProviders(false)
       }
@@ -47,7 +81,7 @@ export function ConfigureAIPage(): ReactElement {
   function handleProviderChange(providerName: string): void {
     setSelectedProvider(providerName)
     setModels([])
-    setSelectedModel('')
+    setSelectedModelId('')
     if (!providerName) return
     setLoadingModels(true)
     void (async (): Promise<void> => {
@@ -55,9 +89,42 @@ export function ConfigureAIPage(): ReactElement {
         const data = await getModelsByProvider(providerName)
         setModels(data)
       } catch {
-        setError('Failed to load models.')
+        setFormError('Failed to load models.')
       } finally {
         setLoadingModels(false)
+      }
+    })()
+  }
+
+  function handleSave(): void {
+    setFormError(null)
+    if (!selectedModelId) {
+      setFormError('Please select a model.')
+      return
+    }
+    const tokens = parseInt(maxTokens, 10)
+    if (!maxTokens || isNaN(tokens) || tokens < 1 || tokens > 32768) {
+      setFormError('Max tokens must be between 1 and 32768.')
+      return
+    }
+    if (selectedType === 'cloud' && !apiKey.trim()) {
+      setFormError('API key is required for cloud models.')
+      return
+    }
+    setSaving(true)
+    void (async (): Promise<void> => {
+      try {
+        const config = await saveUserConfig({
+          llm_model_id: parseInt(selectedModelId, 10),
+          api_key: selectedType === 'local' ? '' : apiKey,
+          max_tokens: tokens,
+        })
+        setExistingConfig(config)
+        setPageState('configured')
+      } catch {
+        setFormError('Failed to save configuration.')
+      } finally {
+        setSaving(false)
       }
     })()
   }
@@ -68,118 +135,253 @@ export function ConfigureAIPage(): ReactElement {
   }))
 
   const modelOptions = models.map((m) => ({
-    value: m.model_name,
+    value: String(m.id),
     label: m.model_name,
   }))
+
+  if (pageState === 'loading') {
+    return (
+      <div className="p-8">
+        <h1 className="text-2xl font-semibold text-white mb-1">Configure AI</h1>
+        <p className="text-gray-600 text-sm mt-4">Loading configuration...</p>
+      </div>
+    )
+  }
+
+  if (pageState === 'configured' && existingConfig !== null) {
+    return (
+      <div className="p-8 max-w-lg">
+        <h1 className="text-2xl font-semibold text-white mb-1">Configure AI</h1>
+        <p className="text-gray-500 text-sm mb-8">Current AI configuration for Marvis.</p>
+
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium tracking-wide uppercase text-gray-500">
+              Model Type
+            </span>
+            <span
+              className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                existingConfig.model_type === 'cloud'
+                  ? 'bg-cyan-500/10 text-cyan-400'
+                  : 'bg-purple-500/10 text-purple-400'
+              }`}
+            >
+              {existingConfig.model_type}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium tracking-wide uppercase text-gray-500">
+              Provider
+            </span>
+            <span className="text-sm text-white">{existingConfig.provider_name}</span>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium tracking-wide uppercase text-gray-500">
+              Model
+            </span>
+            <span className="text-sm text-white">{existingConfig.model_name}</span>
+          </div>
+
+          {existingConfig.model_type === 'cloud' && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium tracking-wide uppercase text-gray-500">
+                API Key
+              </span>
+              <span className="text-sm text-white font-mono">
+                {maskApiKey(existingConfig.api_key)}
+              </span>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium tracking-wide uppercase text-gray-500">
+              Max Tokens
+            </span>
+            <span className="text-sm text-white">
+              {existingConfig.max_tokens.toLocaleString()}
+            </span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setPageState('configuring')
+          }}
+          className="mt-6 px-6 py-2.5 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-lg transition-colors cursor-pointer"
+        >
+          Edit Configuration
+        </button>
+      </div>
+    )
+  }
+
+  if (pageState === 'empty') {
+    return (
+      <div className="p-8">
+        <h1 className="text-2xl font-semibold text-white mb-1">Configure AI</h1>
+        <p className="text-gray-500 text-sm mb-8">Select a provider and model for Marvis to use.</p>
+
+        {loadError !== null && <p className="text-red-400 text-sm mb-6">{loadError}</p>}
+
+        <div className="flex flex-col items-center justify-center w-full py-16 border border-dashed border-gray-800 rounded-2xl gap-4">
+          <p className="text-gray-500 text-sm">No AI configuration set.</p>
+          <button
+            type="button"
+            onClick={() => {
+              setPageState('configuring')
+            }}
+            className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-gray-950 font-semibold rounded-lg transition-colors cursor-pointer"
+          >
+            Configure
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-8">
       <h1 className="text-2xl font-semibold text-white mb-1">Configure AI</h1>
       <p className="text-gray-500 text-sm mb-8">Select a provider and model for Marvis to use.</p>
 
-      {error !== null && (
-        <p className="text-red-400 text-sm mb-6">{error}</p>
-      )}
+      {formError !== null && <p className="text-red-400 text-sm mb-6">{formError}</p>}
 
       <div className="flex flex-col gap-6">
-      <div className="flex gap-8">
-        {/* Left — dropdowns */}
-        <div className="flex-1 space-y-5">
-          <div className="space-y-3">
-            <label className="text-xs font-medium tracking-wide uppercase text-gray-500">Model Type</label>
-            <Dropdown
-              value={selectedType}
-              onChange={handleTypeChange}
-              placeholder="Select a type"
-              options={MODEL_TYPE_OPTIONS}
-            />
-          </div>
-
-          <div className="space-y-3">
-            <label className={`text-xs font-medium tracking-wide uppercase ${selectedType ? 'text-gray-500' : 'text-gray-700'}`}>
-              Provider
-            </label>
-            <Dropdown
-              value={selectedProvider}
-              onChange={handleProviderChange}
-              disabled={!selectedType || loadingProviders}
-              placeholder={
-                !selectedType ? 'Select a type first'
-                : loadingProviders ? 'Loading providers...'
-                : 'Select a provider'
-              }
-              options={providerOptions}
-            />
-          </div>
-
-          <div className="space-y-3">
-            <label className={`text-xs font-medium tracking-wide uppercase ${selectedProvider ? 'text-gray-500' : 'text-gray-700'}`}>
-              Model
-            </label>
-            <Dropdown
-              value={selectedModel}
-              onChange={setSelectedModel}
-              disabled={!selectedProvider || loadingModels}
-              placeholder={
-                !selectedProvider ? 'Select a provider first'
-                : loadingModels ? 'Loading models...'
-                : 'Select a model'
-              }
-              options={modelOptions}
-            />
-          </div>
-        </div>
-
-        {/* Divider */}
-        <div className="w-px bg-gray-800 self-stretch" />
-
-        {/* Right — config inputs */}
-        <div className="flex-1 space-y-5">
-          <div className="space-y-3">
-            <label className="text-xs font-medium tracking-wide uppercase text-gray-500">API Key</label>
-            <div className="relative">
-              <input
-                type={showApiKey ? 'text' : 'password'}
-                value={apiKey}
-                onChange={(e) => { setApiKey(e.target.value) }}
-                placeholder={selectedType === 'local' ? 'Not required for local models' : 'Paste your API key here'}
-                disabled={selectedType === 'local'}
-                className="w-full bg-gray-900 border border-gray-700 hover:border-gray-600 focus:border-cyan-500 text-white rounded-xl px-4 py-3.5 pr-11 outline-none transition-colors placeholder:text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
+        <div className="flex gap-8">
+          <div className="flex-1 space-y-5">
+            <div className="space-y-3">
+              <label className="text-xs font-medium tracking-wide uppercase text-gray-500">
+                Model Type
+              </label>
+              <Dropdown
+                value={selectedType}
+                onChange={handleTypeChange}
+                placeholder="Select a type"
+                options={MODEL_TYPE_OPTIONS}
               />
-              <button
-                type="button"
-                onClick={() => { setShowApiKey((prev) => !prev) }}
-                disabled={selectedType === 'local'}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            </div>
+
+            <div className="space-y-3">
+              <label
+                className={`text-xs font-medium tracking-wide uppercase ${selectedType ? 'text-gray-500' : 'text-gray-700'}`}
               >
-                {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
+                Provider
+              </label>
+              <Dropdown
+                value={selectedProvider}
+                onChange={handleProviderChange}
+                disabled={!selectedType || loadingProviders}
+                placeholder={
+                  !selectedType
+                    ? 'Select a type first'
+                    : loadingProviders
+                      ? 'Loading providers...'
+                      : 'Select a provider'
+                }
+                options={providerOptions}
+              />
+            </div>
+
+            <div className="space-y-3">
+              <label
+                className={`text-xs font-medium tracking-wide uppercase ${selectedProvider ? 'text-gray-500' : 'text-gray-700'}`}
+              >
+                Model
+              </label>
+              <Dropdown
+                value={selectedModelId}
+                onChange={setSelectedModelId}
+                disabled={!selectedProvider || loadingModels}
+                placeholder={
+                  !selectedProvider
+                    ? 'Select a provider first'
+                    : loadingModels
+                      ? 'Loading models...'
+                      : 'Select a model'
+                }
+                options={modelOptions}
+              />
             </div>
           </div>
 
-          <div className="space-y-3">
-            <label className="text-xs font-medium tracking-wide uppercase text-gray-500">Max Tokens</label>
-            <input
-              type="number"
-              value={maxTokens}
-              onChange={(e) => { setMaxTokens(e.target.value) }}
-              placeholder="e.g. 1024"
-              min={1}
-              max={32768}
-              className="w-full bg-gray-900 border border-gray-700 hover:border-gray-600 focus:border-cyan-500 text-white rounded-xl px-4 py-3.5 outline-none transition-colors placeholder:text-gray-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            />
+          <div className="w-px bg-gray-800 self-stretch" />
+
+          <div className="flex-1 space-y-5">
+            <div className="space-y-3">
+              <label className="text-xs font-medium tracking-wide uppercase text-gray-500">
+                API Key
+              </label>
+              <div className="relative">
+                <input
+                  type={showApiKey ? 'text' : 'password'}
+                  value={apiKey}
+                  onChange={(e) => {
+                    setApiKey(e.target.value)
+                  }}
+                  placeholder={
+                    selectedType === 'local'
+                      ? 'Not required for local models'
+                      : 'Paste your API key here'
+                  }
+                  disabled={selectedType === 'local'}
+                  className="w-full bg-gray-900 border border-gray-700 hover:border-gray-600 focus:border-cyan-500 text-white rounded-xl px-4 py-3.5 pr-11 outline-none transition-colors placeholder:text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowApiKey((prev) => !prev)
+                  }}
+                  disabled={selectedType === 'local'}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-xs font-medium tracking-wide uppercase text-gray-500">
+                Max Tokens
+              </label>
+              <input
+                type="number"
+                value={maxTokens}
+                onChange={(e) => {
+                  setMaxTokens(e.target.value)
+                }}
+                placeholder="e.g. 1024"
+                min={1}
+                max={32768}
+                className="w-full bg-gray-900 border border-gray-700 hover:border-gray-600 focus:border-cyan-500 text-white rounded-xl px-4 py-3.5 outline-none transition-colors placeholder:text-gray-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="flex justify-end">
-        <button
-          type="button"
-          className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-gray-950 font-semibold rounded-lg transition-colors cursor-pointer"
-        >
-          Save Configuration
-        </button>
-      </div>
+        <div className="flex justify-end gap-3">
+          {existingConfig !== null && (
+            <button
+              type="button"
+              onClick={() => {
+                setPageState('configured')
+              }}
+              className="px-6 py-2.5 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-lg transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-gray-950 font-semibold rounded-lg transition-colors cursor-pointer"
+          >
+            {saving ? 'Saving...' : 'Save Configuration'}
+          </button>
+        </div>
       </div>
     </div>
   )

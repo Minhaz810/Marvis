@@ -19,6 +19,20 @@ export interface LLMModel {
   updated_at: string
 }
 
+export interface UserAIConfig {
+  id: number
+  llm_model_id: number
+  user_id: number | null
+  api_key: string
+  max_tokens: number
+  is_active: boolean
+  model_name: string
+  provider_name: string
+  model_type: 'local' | 'cloud'
+  created_at: string
+  updated_at: string
+}
+
 export async function getProviders(): Promise<Provider[]> {
   const res = await fetchWithAuth(`${BASE_URL}/api/v1/ai-configuration/providers`)
   if (!res.ok) throw new Error('Failed to fetch providers')
@@ -39,4 +53,25 @@ export async function getModelsByProvider(providerName: string): Promise<LLMMode
   )
   if (!res.ok) throw new Error('Failed to fetch models')
   return res.json() as Promise<LLMModel[]>
+}
+
+export async function getUserConfig(): Promise<UserAIConfig | null> {
+  const res = await fetchWithAuth(`${BASE_URL}/api/v1/ai-configuration/config`)
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error('Failed to fetch config')
+  return res.json() as Promise<UserAIConfig>
+}
+
+export async function saveUserConfig(payload: {
+  llm_model_id: number
+  api_key: string
+  max_tokens: number
+}): Promise<UserAIConfig> {
+  const res = await fetchWithAuth(`${BASE_URL}/api/v1/ai-configuration/config`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error('Failed to save config')
+  return res.json() as Promise<UserAIConfig>
 }
