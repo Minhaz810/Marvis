@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ai_configuration.constants import PROVIDER_NOT_FOUND
-from ai_configuration.models import LLMModel, LLMProvider
+from ai_configuration.models import LLMModel, LLMProvider, ModelType
 
 
 class AIConfigurationService:
@@ -19,6 +19,15 @@ class AIConfigurationService:
         """Return all available LLM providers."""
         result = await self.db.execute(
             select(LLMProvider).order_by(LLMProvider.provider_name)
+        )
+        return list(result.scalars().all())
+
+    async def get_providers_by_type(self, model_type: ModelType) -> list[LLMProvider]:
+        """Return all LLM providers filtered by model type (local or cloud)."""
+        result = await self.db.execute(
+            select(LLMProvider)
+            .where(LLMProvider.model_type == model_type)
+            .order_by(LLMProvider.provider_name)
         )
         return list(result.scalars().all())
 
