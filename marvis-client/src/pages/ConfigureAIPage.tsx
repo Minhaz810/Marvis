@@ -150,17 +150,27 @@ export function ConfigureAIPage(): ReactElement {
 
   if (pageState === 'configured' && existingConfig !== null) {
     return (
-      <div className="p-8 max-w-lg">
-        <h1 className="text-2xl font-semibold text-white mb-1">Configure AI</h1>
-        <p className="text-gray-500 text-sm mb-8">Current AI configuration for Marvis.</p>
+      <div className="p-8">
+        <div className="flex items-start justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-semibold text-white mb-1">Configure AI</h1>
+            <p className="text-gray-500 text-sm">Current AI configuration for Marvis.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => { setPageState('configuring') }}
+            className="px-5 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
+          >
+            Edit
+          </button>
+        </div>
 
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium tracking-wide uppercase text-gray-500">
-              Model Type
-            </span>
+        <div className="grid grid-cols-2 gap-x-12 gap-y-6">
+          <div className="space-y-2">
+            <p className="text-xs font-medium tracking-wide uppercase text-gray-500">Model Type</p>
+            <div className="border-t border-gray-800" />
             <span
-              className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+              className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full ${
                 existingConfig.model_type === 'cloud'
                   ? 'bg-cyan-500/10 text-cyan-400'
                   : 'bg-purple-500/10 text-purple-400'
@@ -170,50 +180,32 @@ export function ConfigureAIPage(): ReactElement {
             </span>
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium tracking-wide uppercase text-gray-500">
-              Provider
-            </span>
-            <span className="text-sm text-white">{existingConfig.provider_name}</span>
+          <div className="space-y-2">
+            <p className="text-xs font-medium tracking-wide uppercase text-gray-500">Provider</p>
+            <div className="border-t border-gray-800" />
+            <p className="text-sm text-white">{existingConfig.provider_name}</p>
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium tracking-wide uppercase text-gray-500">
-              Model
-            </span>
-            <span className="text-sm text-white">{existingConfig.model_name}</span>
+          <div className="space-y-2">
+            <p className="text-xs font-medium tracking-wide uppercase text-gray-500">Model</p>
+            <div className="border-t border-gray-800" />
+            <p className="text-sm text-white">{existingConfig.model_name}</p>
           </div>
 
-          {existingConfig.model_type === 'cloud' && (
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium tracking-wide uppercase text-gray-500">
-                API Key
-              </span>
-              <span className="text-sm text-white font-mono">
-                {maskApiKey(existingConfig.api_key)}
-              </span>
+          <div className="space-y-2">
+            <p className="text-xs font-medium tracking-wide uppercase text-gray-500">Max Tokens</p>
+            <div className="border-t border-gray-800" />
+            <p className="text-sm text-white">{existingConfig.max_tokens.toLocaleString()}</p>
+          </div>
+
+          {existingConfig.api_key && (
+            <div className="space-y-2 col-span-2">
+              <p className="text-xs font-medium tracking-wide uppercase text-gray-500">API Key</p>
+              <div className="border-t border-gray-800" />
+              <p className="text-sm text-white font-mono">{maskApiKey(existingConfig.api_key)}</p>
             </div>
           )}
-
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium tracking-wide uppercase text-gray-500">
-              Max Tokens
-            </span>
-            <span className="text-sm text-white">
-              {existingConfig.max_tokens.toLocaleString()}
-            </span>
-          </div>
         </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            setPageState('configuring')
-          }}
-          className="mt-6 px-6 py-2.5 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-lg transition-colors cursor-pointer"
-        >
-          Edit Configuration
-        </button>
       </div>
     )
   }
