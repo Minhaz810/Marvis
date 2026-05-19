@@ -24,6 +24,7 @@ ignore = [
     "B008",  # FastAPI uses Depends() in argument defaults by design
     "S105",  # False positive — flags error message strings as hardcoded passwords
     "D205",  # Summary line allowed to wrap when it exceeds line length
+    "E712",  # SQLAlchemy boolean column comparisons require == True syntax
 ]
 
 [tool.ruff.lint.pydocstyle]

@@ -4,8 +4,14 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ai_configuration.constants import PROVIDER_NOT_FOUND
-from ai_configuration.models import LLMModel, LLMProvider, ModelType
+from ai_configuration.constants import (
+    API_KEY_REQUIRED,
+    MODEL_NOT_FOUND,
+    PROVIDER_NOT_FOUND,
+    USER_CONFIG_NOT_FOUND,
+)
+from ai_configuration.models import LLMModel, LLMProvider, ModelType, UserAIConfig
+from ai_configuration.v1.schema import UserAIConfigCreate
 
 
 class AIConfigurationService:
@@ -50,3 +56,76 @@ class AIConfigurationService:
             .order_by(LLMModel.model_name)
         )
         return list(models_result.scalars().all())
+
+    async def save_user_config(
+        self, user_id: int, payload: UserAIConfigCreate
+    ) -> UserAIConfig:
+        """Create or update the AI configuration for a user.
+        Validates that the model exists and that an API key is provided
+        for cloud models.If the user already has a config, it is updated
+        in place.
+        """
+        model_result = await self.db.execute(
+            select(LLMModel).where(
+                LLMModel.id == payload.llm_model_id, LLMModel.is_active == True
+            )  # noqa: E712
+        )
+        model = model_result.scalar_one_or_none()
+        if not model:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=MODEL_NOT_FOUND
+            )
+
+        provider_result = await self.db.execute(
+            select(LLMProvider).where(LLMProvider.id == model.provider_id)
+        )
+        provider = provider_result.scalar_one_or_none()
+        if (
+            provider
+            and provider.model_type == ModelType.cloud
+            and not payload.api_key.strip()
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=API_KEY_REQUIRED,
+            )
+
+        existing_result = await self.db.execute(
+            select(UserAIConfig).where(UserAIConfig.user_id == user_id)
+        )
+        existing = existing_result.scalar_one_or_none()
+
+        if existing:
+            existing.llm_model_id = payload.llm_model_id
+            existing.api_key = payload.api_key
+            existing.max_tokens = payload.max_tokens
+            await self.db.commit()
+            await self.db.refresh(existing)
+            return existing
+
+        config = UserAIConfig(
+            user_id=user_id,
+            llm_model_id=payload.llm_model_id,
+            api_key=payload.api_key,
+            max_tokens=payload.max_tokens,
+            is_active=True,
+        )
+        self.db.add(config)
+        await self.db.commit()
+        await self.db.refresh(config)
+        return config
+
+    async def get_user_config(self, user_id: int) -> UserAIConfig:
+        """Return the AI configuration for a user.
+
+        Raises HTTP 404 if no configuration exists.
+        """
+        result = await self.db.execute(
+            select(UserAIConfig).where(UserAIConfig.user_id == user_id)
+        )
+        config = result.scalar_one_or_none()
+        if not config:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=USER_CONFIG_NOT_FOUND
+            )
+        return config
