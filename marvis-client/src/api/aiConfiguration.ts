@@ -34,6 +34,15 @@ export async function getProviders(): Promise<Provider[]> {
   return res.json() as Promise<Provider[]>
 }
 
+export async function getProvidersByType(modelType: 'local' | 'cloud'): Promise<Provider[]> {
+  const res = await fetch(
+    `${BASE_URL}/api/v1/ai-configuration/providers/by-type?model_type=${modelType}`,
+    { headers: authHeaders() },
+  )
+  if (!res.ok) throw new Error('Failed to fetch providers')
+  return res.json() as Promise<Provider[]>
+}
+
 export async function getModelsByProvider(providerName: string): Promise<LLMModel[]> {
   const res = await fetch(
     `${BASE_URL}/api/v1/ai-configuration/providers/${encodeURIComponent(providerName)}/models`,

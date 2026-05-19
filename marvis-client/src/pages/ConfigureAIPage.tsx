@@ -1,22 +1,35 @@
 import type { ReactElement } from 'react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { LLMModel, Provider } from '../api/aiConfiguration'
-import { getModelsByProvider, getProviders } from '../api/aiConfiguration'
+import { getModelsByProvider, getProvidersByType } from '../api/aiConfiguration'
 import { Dropdown } from '../components/Dropdown'
 
+const MODEL_TYPE_OPTIONS = [
+  { value: 'cloud', label: 'Cloud' },
+  { value: 'local', label: 'Local' },
+]
+
 export function ConfigureAIPage(): ReactElement {
+  const [selectedType, setSelectedType] = useState<'local' | 'cloud' | ''>('')
   const [providers, setProviders] = useState<Provider[]>([])
-  const [models, setModels] = useState<LLMModel[]>([])
   const [selectedProvider, setSelectedProvider] = useState<string>('')
+  const [models, setModels] = useState<LLMModel[]>([])
   const [selectedModel, setSelectedModel] = useState<string>('')
-  const [loadingProviders, setLoadingProviders] = useState(true)
+  const [loadingProviders, setLoadingProviders] = useState(false)
   const [loadingModels, setLoadingModels] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  function handleTypeChange(type: string): void {
+    setSelectedType(type as 'local' | 'cloud')
+    setProviders([])
+    setSelectedProvider('')
+    setModels([])
+    setSelectedModel('')
+    if (!type) return
+    setLoadingProviders(true)
     void (async (): Promise<void> => {
       try {
-        const data = await getProviders()
+        const data = await getProvidersByType(type as 'local' | 'cloud')
         setProviders(data)
       } catch {
         setError('Failed to load providers.')
@@ -24,12 +37,12 @@ export function ConfigureAIPage(): ReactElement {
         setLoadingProviders(false)
       }
     })()
-  }, [])
+  }
 
   function handleProviderChange(providerName: string): void {
     setSelectedProvider(providerName)
-    setSelectedModel('')
     setModels([])
+    setSelectedModel('')
     if (!providerName) return
     setLoadingModels(true)
     void (async (): Promise<void> => {
@@ -46,7 +59,7 @@ export function ConfigureAIPage(): ReactElement {
 
   const providerOptions = providers.map((p) => ({
     value: p.provider_name,
-    label: `${p.provider_name} (${p.model_type})`,
+    label: p.provider_name,
   }))
 
   const modelOptions = models.map((m) => ({
@@ -65,12 +78,28 @@ export function ConfigureAIPage(): ReactElement {
 
       <div className="space-y-5">
         <div className="space-y-3">
-          <label className="text-xs font-medium tracking-wide uppercase text-gray-500">Provider</label>
+          <label className="text-xs font-medium tracking-wide uppercase text-gray-500">Model Type</label>
+          <Dropdown
+            value={selectedType}
+            onChange={handleTypeChange}
+            placeholder="Select a type"
+            options={MODEL_TYPE_OPTIONS}
+          />
+        </div>
+
+        <div className="space-y-3">
+          <label className={`text-xs font-medium tracking-wide uppercase ${selectedType ? 'text-gray-500' : 'text-gray-700'}`}>
+            Provider
+          </label>
           <Dropdown
             value={selectedProvider}
             onChange={handleProviderChange}
-            disabled={loadingProviders}
-            placeholder={loadingProviders ? 'Loading providers...' : 'Select a provider'}
+            disabled={!selectedType || loadingProviders}
+            placeholder={
+              !selectedType ? 'Select a type first'
+              : loadingProviders ? 'Loading providers...'
+              : 'Select a provider'
+            }
             options={providerOptions}
           />
         </div>
