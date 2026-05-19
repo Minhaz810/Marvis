@@ -1,13 +1,6 @@
-import { getAccessToken } from './auth'
+import { fetchWithAuth } from './client'
 
 const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000'
-
-function authHeaders(): HeadersInit {
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${getAccessToken() ?? ''}`,
-  }
-}
 
 export interface Provider {
   id: number
@@ -27,26 +20,22 @@ export interface LLMModel {
 }
 
 export async function getProviders(): Promise<Provider[]> {
-  const res = await fetch(`${BASE_URL}/api/v1/ai-configuration/providers`, {
-    headers: authHeaders(),
-  })
+  const res = await fetchWithAuth(`${BASE_URL}/api/v1/ai-configuration/providers`)
   if (!res.ok) throw new Error('Failed to fetch providers')
   return res.json() as Promise<Provider[]>
 }
 
 export async function getProvidersByType(modelType: 'local' | 'cloud'): Promise<Provider[]> {
-  const res = await fetch(
+  const res = await fetchWithAuth(
     `${BASE_URL}/api/v1/ai-configuration/providers/by-type?model_type=${modelType}`,
-    { headers: authHeaders() },
   )
   if (!res.ok) throw new Error('Failed to fetch providers')
   return res.json() as Promise<Provider[]>
 }
 
 export async function getModelsByProvider(providerName: string): Promise<LLMModel[]> {
-  const res = await fetch(
+  const res = await fetchWithAuth(
     `${BASE_URL}/api/v1/ai-configuration/providers/${encodeURIComponent(providerName)}/models`,
-    { headers: authHeaders() },
   )
   if (!res.ok) throw new Error('Failed to fetch models')
   return res.json() as Promise<LLMModel[]>
