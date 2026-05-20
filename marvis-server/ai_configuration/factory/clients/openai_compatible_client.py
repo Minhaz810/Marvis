@@ -1,23 +1,24 @@
 from __future__ import annotations
 
+from ai_configuration.constants import Provider
 from ai_configuration.factory.base import AIClient
 
 PROVIDER_BASE_URLS: dict[str, str] = {
-    "Together AI": "https://api.together.xyz/v1",
-    "Perplexity AI": "https://api.perplexity.ai",
-    "xAI": "https://api.x.ai/v1",
-    "DeepSeek": "https://api.deepseek.com/v1",
-    "Fireworks AI": "https://api.fireworks.ai/inference/v1",
-    "SambaNova": "https://api.sambanova.ai/v1",
-    "LM Studio": "http://localhost:1234/v1",
-    "LocalAI": "http://localhost:8080/v1",
-    "Jan": "http://localhost:1337/v1",
-    "vLLM": "http://localhost:8000/v1",
-    "llama.cpp": "http://localhost:8000/v1",
-    "KoboldCpp": "http://localhost:5001/v1",
-    "llamafile": "http://localhost:8080/v1",
-    "Text Generation WebUI": "http://localhost:5000/v1",
-    "GPT4All": "http://localhost:4891/v1",
+    Provider.TOGETHER_AI: "https://api.together.xyz/v1",
+    Provider.PERPLEXITY_AI: "https://api.perplexity.ai",
+    Provider.XAI: "https://api.x.ai/v1",
+    Provider.DEEPSEEK: "https://api.deepseek.com/v1",
+    Provider.FIREWORKS_AI: "https://api.fireworks.ai/inference/v1",
+    Provider.SAMBANOVA: "https://api.sambanova.ai/v1",
+    Provider.LM_STUDIO: "http://localhost:1234/v1",
+    Provider.LOCALAI: "http://localhost:8080/v1",
+    Provider.JAN: "http://localhost:1337/v1",
+    Provider.VLLM: "http://localhost:8000/v1",
+    Provider.LLAMA_CPP: "http://localhost:8000/v1",
+    Provider.KOBOLDCPP: "http://localhost:5001/v1",
+    Provider.LLAMAFILE: "http://localhost:8080/v1",
+    Provider.TEXT_GENERATION_WEBUI: "http://localhost:5000/v1",
+    Provider.GPT4ALL: "http://localhost:4891/v1",
 }
 
 
