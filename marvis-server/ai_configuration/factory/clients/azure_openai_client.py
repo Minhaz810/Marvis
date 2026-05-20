@@ -10,7 +10,8 @@ class AzureOpenAIClient(AIClient):
     e.g. "sk-xxx:https://my-resource.openai.azure.com/:2024-02-01"
     """
 
-    def __init__(self, api_key: str, model: str) -> None:
+    def __init__(self, api_key: str, model: str, max_tokens: int) -> None:
+        super().__init__(api_key=api_key, model=model, max_tokens=max_tokens)
         from openai import AsyncAzureOpenAI
 
         parts = api_key.split(":", 2)
@@ -22,13 +23,12 @@ class AzureOpenAIClient(AIClient):
             azure_endpoint=endpoint,
             api_version=api_version,
         )
-        self._model = model
 
-    async def chat(self, messages: list[dict[str, str]], max_tokens: int) -> str:
+    async def chat(self, messages: list[dict[str, str]]) -> str:
         """Send messages and return the assistant reply."""
         response = await self._client.chat.completions.create(
             model=self._model,
             messages=messages,
-            max_tokens=max_tokens,
+            max_tokens=self._max_tokens,
         )
         return response.choices[0].message.content or ""

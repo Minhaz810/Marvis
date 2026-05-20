@@ -10,8 +10,10 @@ from ai_configuration.constants import (
     PROVIDER_NOT_FOUND,
     USER_CONFIG_NOT_FOUND,
 )
+from ai_configuration.factory import get_ai_client
+from ai_configuration.factory.base import AIClient
 from ai_configuration.models import LLMModel, LLMProvider, ModelType, UserAIConfig
-from ai_configuration.v1.schema import UserAIConfigCreate
+from ai_configuration.v1.schema import UserAIConfigCreate, UserAIConfigResponse
 
 
 class AIConfigurationService:
@@ -153,3 +155,14 @@ class AIConfigurationService:
                 status_code=status.HTTP_404_NOT_FOUND, detail=USER_CONFIG_NOT_FOUND
             )
         return await self._enrich_config(config)
+
+    async def get_ai_client_for_user(self, user_id: int) -> AIClient:
+        """Return a ready-to-use AI client for the given user.
+
+        Fetches the user's saved configuration from the database and builds
+        the appropriate provider client via the factory. The client already
+        has max_tokens embedded, so callers only need to supply messages.
+        """
+        config_dict = await self.get_user_config(user_id)
+        config = UserAIConfigResponse.model_validate(config_dict)
+        return get_ai_client(config)

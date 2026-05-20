@@ -25,17 +25,19 @@ PROVIDER_BASE_URLS: dict[str, str] = {
 class OpenAICompatibleClient(AIClient):
     """Generic client for any provider that exposes an OpenAI-compatible chat API."""
 
-    def __init__(self, api_key: str, model: str, base_url: str) -> None:
+    def __init__(
+        self, api_key: str, model: str, max_tokens: int, base_url: str
+    ) -> None:
+        super().__init__(api_key=api_key, model=model, max_tokens=max_tokens)
         from openai import AsyncOpenAI
 
         self._client = AsyncOpenAI(api_key=api_key or "not-needed", base_url=base_url)
-        self._model = model
 
-    async def chat(self, messages: list[dict[str, str]], max_tokens: int) -> str:
+    async def chat(self, messages: list[dict[str, str]]) -> str:
         """Send messages and return the assistant reply."""
         response = await self._client.chat.completions.create(
             model=self._model,
             messages=messages,
-            max_tokens=max_tokens,
+            max_tokens=self._max_tokens,
         )
         return response.choices[0].message.content or ""

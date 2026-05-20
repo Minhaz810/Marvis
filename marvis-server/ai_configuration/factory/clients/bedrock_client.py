@@ -6,7 +6,8 @@ from ai_configuration.factory.base import AIClient
 class BedrockClient(AIClient):
     """Amazon Bedrock client using the Converse API (supports all Nova/Titan models)."""
 
-    def __init__(self, api_key: str, model: str) -> None:
+    def __init__(self, api_key: str, model: str, max_tokens: int) -> None:
+        super().__init__(api_key=api_key, model=model, max_tokens=max_tokens)
         import boto3
 
         parts = api_key.split(":")
@@ -19,9 +20,8 @@ class BedrockClient(AIClient):
             aws_secret_access_key=secret_key,
             region_name=region,
         )
-        self._model = model
 
-    async def chat(self, messages: list[dict[str, str]], max_tokens: int) -> str:
+    async def chat(self, messages: list[dict[str, str]]) -> str:
         """Send messages and return the assistant reply."""
         import asyncio
 
@@ -36,7 +36,7 @@ class BedrockClient(AIClient):
         kwargs: dict = {
             "modelId": self._model,
             "messages": converse_messages,
-            "inferenceConfig": {"maxTokens": max_tokens},
+            "inferenceConfig": {"maxTokens": self._max_tokens},
         }
         if system_parts:
             kwargs["system"] = system_parts

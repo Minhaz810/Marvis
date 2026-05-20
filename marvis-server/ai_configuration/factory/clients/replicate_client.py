@@ -6,14 +6,13 @@ from ai_configuration.factory.base import AIClient
 class ReplicateClient(AIClient):
     """Replicate chat client."""
 
-    def __init__(self, api_key: str, model: str) -> None:
+    def __init__(self, api_key: str, model: str, max_tokens: int) -> None:
+        super().__init__(api_key=api_key, model=model, max_tokens=max_tokens)
         import replicate
 
         self._replicate = replicate
-        self._api_key = api_key
-        self._model = model
 
-    async def chat(self, messages: list[dict[str, str]], max_tokens: int) -> str:
+    async def chat(self, messages: list[dict[str, str]]) -> str:
         """Send messages and return the assistant reply."""
         import os
 
@@ -26,7 +25,7 @@ class ReplicateClient(AIClient):
 
         output = await self._replicate.async_run(
             self._model,
-            input={"prompt": prompt, "max_new_tokens": max_tokens},
+            input={"prompt": prompt, "max_new_tokens": self._max_tokens},
         )
         if isinstance(output, list):
             return "".join(str(t) for t in output)

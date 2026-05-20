@@ -6,13 +6,13 @@ from ai_configuration.factory.base import AIClient
 class GoogleClient(AIClient):
     """Google Gemini chat client."""
 
-    def __init__(self, api_key: str, model: str) -> None:
+    def __init__(self, api_key: str, model: str, max_tokens: int) -> None:
+        super().__init__(api_key=api_key, model=model, max_tokens=max_tokens)
         from google import genai
 
         self._client = genai.Client(api_key=api_key)
-        self._model = model
 
-    async def chat(self, messages: list[dict[str, str]], max_tokens: int) -> str:
+    async def chat(self, messages: list[dict[str, str]]) -> str:
         """Send messages and return the assistant reply."""
         from google.genai import types
 
@@ -23,7 +23,7 @@ class GoogleClient(AIClient):
                 types.Content(role=role, parts=[types.Part(text=m["content"])])
             )
 
-        config = types.GenerateContentConfig(max_output_tokens=max_tokens)
+        config = types.GenerateContentConfig(max_output_tokens=self._max_tokens)
         response = await self._client.aio.models.generate_content(
             model=self._model,
             contents=contents,

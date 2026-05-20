@@ -6,13 +6,13 @@ from ai_configuration.factory.base import AIClient
 class AI21Client(AIClient):
     """AI21 Labs chat client."""
 
-    def __init__(self, api_key: str, model: str) -> None:
+    def __init__(self, api_key: str, model: str, max_tokens: int) -> None:
+        super().__init__(api_key=api_key, model=model, max_tokens=max_tokens)
         from ai21 import AsyncAI21Client
 
         self._client = AsyncAI21Client(api_key=api_key)
-        self._model = model
 
-    async def chat(self, messages: list[dict[str, str]], max_tokens: int) -> str:
+    async def chat(self, messages: list[dict[str, str]]) -> str:
         """Send messages and return the assistant reply."""
         from ai21.models.chat import ChatMessage
 
@@ -22,6 +22,6 @@ class AI21Client(AIClient):
         response = await self._client.chat.completions.create(
             model=self._model,
             messages=chat_messages,
-            max_tokens=max_tokens,
+            max_tokens=self._max_tokens,
         )
         return response.choices[0].message.content or ""
