@@ -61,6 +61,17 @@ export function getRefreshToken(): string | null {
   return localStorage.getItem('refresh_token')
 }
 
+export function getUsernameFromToken(): string | null {
+  const token = getAccessToken()
+  if (!token) return null
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))) as Record<string, unknown>
+    return typeof payload.username === 'string' ? payload.username : null
+  } catch {
+    return null
+  }
+}
+
 export async function refreshAccessToken(): Promise<boolean> {
   const refreshToken = getRefreshToken()
   if (!refreshToken) return false
