@@ -1,13 +1,14 @@
 import {
   CalendarDays,
-  History,
   LogOut,
   Menu,
+  MessageCircle,
   MessagesSquare,
   Settings2,
   ShieldCheck,
 } from 'lucide-react'
 import type { ReactElement } from 'react'
+import { MarvisLogo } from './MarvisLogo'
 
 interface NavItem {
   label: string
@@ -19,7 +20,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Communication Channel', icon: <MessagesSquare size={20} /> },
   { label: 'Access Management', icon: <ShieldCheck size={20} /> },
   { label: 'Scheduler', icon: <CalendarDays size={20} /> },
-  { label: 'Chat History', icon: <History size={20} /> },
+  { label: 'Chat', icon: <MessageCircle size={20} /> },
 ]
 
 interface SidebarProps {
@@ -43,10 +44,15 @@ export function Sidebar({ collapsed, onToggle, activeItem, onNavClick }: Sidebar
         >
           <Menu size={20} />
         </button>
-        {!collapsed && (
-          <span className="text-white font-semibold tracking-wide whitespace-nowrap">
-            Marvis
-          </span>
+        {collapsed ? (
+          <MarvisLogo size={28} />
+        ) : (
+          <div className="flex items-center gap-2 overflow-hidden">
+            <MarvisLogo size={28} />
+            <span className="text-white font-semibold tracking-wide whitespace-nowrap">
+              Marvis
+            </span>
+          </div>
         )}
       </div>
 

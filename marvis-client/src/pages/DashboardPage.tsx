@@ -1,10 +1,12 @@
 import type { ReactElement } from 'react'
 import { useState } from 'react'
 import { Sidebar } from '../components/Sidebar'
+import { ChatPage } from './ChatPage'
 import { ConfigureAIPage } from './ConfigureAIPage'
 
 function renderContent(activeItem: string): ReactElement {
   if (activeItem === 'Configure AI') return <ConfigureAIPage />
+  if (activeItem === 'Chat') return <ChatPage />
   return <div />
 }
 
