@@ -8,5 +8,20 @@ alembic
 python-jose[cryptography]
 bcrypt
 
+openai
+anthropic
+google-genai
+mistralai
+cohere
+ai21
+boto3
+groq
+replicate
+aleph-alpha-client
+writerai
+cerebras-cloud-sdk
+huggingface_hub
+ollama
+
 ruff
 pre-commit
