@@ -13,7 +13,11 @@ from ai_configuration.constants import (
 from ai_configuration.factory import get_ai_client
 from ai_configuration.factory.base import AIClient
 from ai_configuration.models import LLMModel, LLMProvider, ModelType, UserAIConfig
-from ai_configuration.v1.schema import UserAIConfigCreate, UserAIConfigResponse
+from ai_configuration.v1.schema import (
+    UserAIConfigCreate,
+    UserAIConfigResponse,
+    UserAIConfigUpdate,
+)
 
 
 class AIConfigurationService:
@@ -154,6 +158,57 @@ class AIConfigurationService:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail=USER_CONFIG_NOT_FOUND
             )
+        return await self._enrich_config(config)
+
+    async def update_user_config(
+        self, user_id: int, payload: UserAIConfigUpdate
+    ) -> dict:
+        """Update the existing AI configuration for a user.
+
+        Raises HTTP 404 if no configuration exists.
+        Raises HTTP 404 if the model does not exist or is inactive.
+        Raises HTTP 422 if the model is cloud-type and no API key is provided.
+        """
+        result = await self.db.execute(
+            select(UserAIConfig).where(UserAIConfig.user_id == user_id)
+        )
+        config = result.scalar_one_or_none()
+        if not config:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=USER_CONFIG_NOT_FOUND
+            )
+
+        model_result = await self.db.execute(
+            select(LLMModel).where(
+                LLMModel.id == payload.llm_model_id,
+                LLMModel.is_active == True,  # noqa: E712
+            )
+        )
+        model = model_result.scalar_one_or_none()
+        if not model:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=MODEL_NOT_FOUND
+            )
+
+        provider_result = await self.db.execute(
+            select(LLMProvider).where(LLMProvider.id == model.provider_id)
+        )
+        provider = provider_result.scalar_one_or_none()
+        if (
+            provider
+            and provider.model_type == ModelType.cloud
+            and not payload.api_key.strip()
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=API_KEY_REQUIRED,
+            )
+
+        config.llm_model_id = payload.llm_model_id
+        config.api_key = payload.api_key
+        config.max_tokens = payload.max_tokens
+        await self.db.commit()
+        await self.db.refresh(config)
         return await self._enrich_config(config)
 
     async def get_ai_client_for_user(self, user_id: int) -> AIClient:

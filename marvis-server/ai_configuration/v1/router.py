@@ -9,6 +9,7 @@ from ai_configuration.v1.schema import (
     LLMProviderResponse,
     UserAIConfigCreate,
     UserAIConfigResponse,
+    UserAIConfigUpdate,
 )
 from ai_configuration.v1.services import AIConfigurationService
 from auth.models import User
@@ -90,6 +91,26 @@ async def save_user_config(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while saving configuration.",
+        ) from exc
+
+
+@router.patch("/config", response_model=UserAIConfigResponse)
+async def update_user_config(
+    payload: UserAIConfigUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserAIConfigResponse:
+    """Update the existing AI configuration for the authenticated user."""
+    try:
+        return await AIConfigurationService(db).update_user_config(
+            current_user.id, payload
+        )  # type: ignore[return-value]
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while updating configuration.",
         ) from exc
 
 
