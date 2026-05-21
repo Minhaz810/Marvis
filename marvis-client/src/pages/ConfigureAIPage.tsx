@@ -58,6 +58,34 @@ export function ConfigureAIPage(): ReactElement {
     })()
   }, [])
 
+  function handleEdit(): void {
+    if (!existingConfig) return
+    setSelectedType(existingConfig.model_type)
+    setSelectedProvider(existingConfig.provider_name)
+    setSelectedModelId(String(existingConfig.llm_model_id))
+    setApiKey(existingConfig.api_key)
+    setMaxTokens(String(existingConfig.max_tokens))
+    setFormError(null)
+    setLoadingProviders(true)
+    setLoadingModels(true)
+    void (async (): Promise<void> => {
+      try {
+        const [providerData, modelData] = await Promise.all([
+          getProvidersByType(existingConfig.model_type),
+          getModelsByProvider(existingConfig.provider_name),
+        ])
+        setProviders(providerData)
+        setModels(modelData)
+      } catch {
+        setFormError('Failed to load configuration options.')
+      } finally {
+        setLoadingProviders(false)
+        setLoadingModels(false)
+      }
+      setPageState('configuring')
+    })()
+  }
+
   function handleTypeChange(type: string): void {
     setSelectedType(type as 'local' | 'cloud')
     setProviders([])
@@ -158,7 +186,7 @@ export function ConfigureAIPage(): ReactElement {
           </div>
           <button
             type="button"
-            onClick={() => { setPageState('configuring') }}
+            onClick={handleEdit}
             className="px-5 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
           >
             Edit
