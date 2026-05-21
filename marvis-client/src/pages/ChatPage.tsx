@@ -1,18 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ReactElement, KeyboardEvent } from 'react'
+import type { KeyboardEvent, ReactElement } from 'react'
 import { SendHorizonal } from 'lucide-react'
 import { getUsernameFromToken } from '../api/auth'
 import { MarvisOrb } from '../components/MarvisOrb'
-
-interface Message {
-  id: number
-  role: 'user' | 'assistant'
-  text: string
-}
+import { useChat } from '../hooks/useChat'
 
 export function ChatPage(): ReactElement {
   const username = getUsernameFromToken()
-  const [messages, setMessages] = useState<Message[]>([])
+  const { messages, send, isThinking, connectionError } = useChat()
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -20,12 +15,12 @@ export function ChatPage(): ReactElement {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, isThinking])
 
   function handleSend(): void {
     const text = input.trim()
     if (!text) return
-    setMessages((prev) => [...prev, { id: Date.now(), role: 'user', text }])
+    send(text)
     setInput('')
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'
@@ -48,7 +43,6 @@ export function ChatPage(): ReactElement {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Main content area */}
       <div className="flex-1 overflow-y-auto">
         {!chatStarted ? (
           <div className="flex flex-col items-center justify-center h-full gap-6">
@@ -61,6 +55,9 @@ export function ChatPage(): ReactElement {
                 Marvis at your Service
               </p>
             </div>
+            {connectionError && (
+              <p className="text-sm text-red-400">{connectionError}</p>
+            )}
           </div>
         ) : (
           <div className="flex flex-col gap-4 px-6 py-6 max-w-3xl mx-auto w-full">
@@ -80,12 +77,26 @@ export function ChatPage(): ReactElement {
                 </div>
               </div>
             ))}
+
+            {isThinking && (
+              <div className="flex justify-start">
+                <div className="bg-gray-800 px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-1.5">
+                  <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce [animation-delay:0ms]" />
+                  <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce [animation-delay:150ms]" />
+                  <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                </div>
+              </div>
+            )}
+
+            {connectionError && (
+              <p className="text-xs text-red-400 text-center">{connectionError}</p>
+            )}
+
             <div ref={bottomRef} />
           </div>
         )}
       </div>
 
-      {/* Chat input */}
       <div className="shrink-0 px-6 py-4">
         <div className="max-w-3xl mx-auto w-full">
           <div className="flex items-end gap-3 bg-gray-800 border border-gray-700 rounded-2xl px-4 py-3 focus-within:border-cyan-500/60 transition-colors">
@@ -101,7 +112,7 @@ export function ChatPage(): ReactElement {
             />
             <button
               onClick={handleSend}
-              disabled={!input.trim()}
+              disabled={!input.trim() || isThinking}
               className="shrink-0 text-gray-500 hover:text-cyan-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer mb-0.5"
             >
               <SendHorizonal size={18} />
