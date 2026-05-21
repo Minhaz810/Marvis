@@ -7,6 +7,7 @@ import {
   getProvidersByType,
   getUserConfig,
   saveUserConfig,
+  updateUserConfig,
 } from '../api/aiConfiguration'
 import { Dropdown } from '../components/Dropdown'
 
@@ -142,11 +143,14 @@ export function ConfigureAIPage(): ReactElement {
     setSaving(true)
     void (async (): Promise<void> => {
       try {
-        const config = await saveUserConfig({
+        const payload = {
           llm_model_id: parseInt(selectedModelId, 10),
           api_key: selectedType === 'local' ? '' : apiKey,
           max_tokens: tokens,
-        })
+        }
+        const config = existingConfig !== null
+          ? await updateUserConfig(payload)
+          : await saveUserConfig(payload)
         setExistingConfig(config)
         setPageState('configured')
       } catch {
