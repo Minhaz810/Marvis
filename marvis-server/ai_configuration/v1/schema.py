@@ -33,7 +33,15 @@ class LLMModelResponse(BaseModel):
 
 
 class UserAIConfigCreate(BaseModel):
-    """Schema for creating or updating a user AI configuration."""
+    """Schema for creating a user AI configuration."""
+
+    llm_model_id: int
+    api_key: str = ""
+    max_tokens: int = Field(ge=1, le=32768)
+
+
+class UserAIConfigUpdate(BaseModel):
+    """Schema for updating an existing user AI configuration."""
 
     llm_model_id: int
     api_key: str = ""
