@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from loguru import logger
 
 from chatbot.constants import AI_ERROR, NO_AI_CONFIG
 from chatbot.v1.dependencies import get_ws_user_id
 from chatbot.v1.schema import ErrorMessage, OutgoingMessage
 from chatbot.v1.services import ChatService
-from config.database import get_db
+from config.database import AsyncSessionLocal
 
 router = APIRouter()
 
@@ -25,40 +25,62 @@ async def chat_websocket(websocket: WebSocket) -> None:
                       JSON  {"error": "..."}  on failure
     """
     await websocket.accept()
+    logger.info("WebSocket connection accepted from {}", websocket.client)
 
-    db: AsyncSession = await anext(get_db())
-    try:
-        user_id = await get_ws_user_id(websocket, db)
-    except ValueError:
-        return
+    async with AsyncSessionLocal() as db:
+        try:
+            user_id = await get_ws_user_id(websocket, db)
+        except ValueError:
+            logger.warning("WebSocket auth failed for client {}", websocket.client)
+            return
 
-    service = ChatService(db=db, user_id=user_id)
-    try:
-        await service.initialize()
-    except Exception:
-        await websocket.send_text(ErrorMessage(error=NO_AI_CONFIG).model_dump_json())
-        await websocket.close()
-        return
+        logger.info("WebSocket authenticated — user_id={}", user_id)
 
-    try:
-        while True:
-            raw = await websocket.receive_text()
-            data = json.loads(raw)
-            content = data.get("content", "").strip()
-            if not content:
-                continue
+        service = ChatService(db=db, user_id=user_id)
+        try:
+            await service.initialize()
+            logger.info("ChatService initialized for user_id={}", user_id)
+        except Exception as e:
+            logger.exception("Failed to initialize ChatService for user_id={}", user_id)
+            detail = e.detail if isinstance(e, HTTPException) else NO_AI_CONFIG
+            await websocket.send_text(ErrorMessage(error=detail).model_dump_json())
+            await websocket.close()
+            return
 
-            try:
-                reply = await service.send(content)
-                await websocket.send_text(
-                    OutgoingMessage(role="assistant", content=reply).model_dump_json()
-                )
-            except Exception:
-                await websocket.send_text(
-                    ErrorMessage(error=AI_ERROR).model_dump_json()
-                )
+        try:
+            while True:
+                raw = await websocket.receive_text()
+                logger.debug("Received frame from user_id={}: {!r}", user_id, raw)
 
-    except WebSocketDisconnect:
-        pass
-    finally:
-        await db.close()
+                try:
+                    data = json.loads(raw)
+                except json.JSONDecodeError:
+                    logger.warning(
+                        "Invalid JSON frame from user_id={}: {!r}", user_id, raw
+                    )
+                    continue
+
+                content = data.get("content", "").strip()
+                if not content:
+                    continue
+
+                try:
+                    reply = await service.send(content)
+                    logger.debug("Reply for user_id={}: {!r}", user_id, reply)
+                    await websocket.send_text(
+                        OutgoingMessage(
+                            role="assistant", content=reply
+                        ).model_dump_json()
+                    )
+                except Exception as e:
+                    logger.exception(
+                        "AI call failed for user_id={} — message: {!r}",
+                        user_id,
+                        content,
+                    )
+                    await websocket.send_text(
+                        ErrorMessage(error=str(e) or AI_ERROR).model_dump_json()
+                    )
+
+        except WebSocketDisconnect:
+            logger.info("WebSocket disconnected — user_id={}", user_id)

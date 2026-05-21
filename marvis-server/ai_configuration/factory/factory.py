@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import HTTPException, status
+from loguru import logger
 
 from ai_configuration.constants import Provider
 from ai_configuration.factory.base import AIClient
@@ -14,6 +15,13 @@ def get_ai_client(config: UserAIConfigResponse) -> AIClient:
     model = config.model_name
     api_key = config.api_key
     max_tokens = config.max_tokens
+
+    logger.info(
+        "Building AI client — provider={!r} model={!r} max_tokens={}",
+        provider,
+        model,
+        max_tokens,
+    )
 
     match provider:
         case Provider.OPENAI:
