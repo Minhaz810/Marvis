@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import WebSocket
 from jose import JWTError, jwt
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth.v1.services import AuthService
@@ -17,6 +18,7 @@ async def get_ws_user_id(websocket: WebSocket, db: AsyncSession) -> int:
     """
     token = websocket.query_params.get("token")
     if not token:
+        logger.warning("WebSocket connection rejected — no token provided")
         await websocket.close(code=4001, reason=INVALID_TOKEN)
         raise ValueError(INVALID_TOKEN)
 
@@ -28,8 +30,10 @@ async def get_ws_user_id(websocket: WebSocket, db: AsyncSession) -> int:
         if user_id is None:
             raise ValueError
     except (JWTError, ValueError) as err:
+        logger.warning("WebSocket connection rejected — invalid token: {}", err)
         await websocket.close(code=4001, reason=INVALID_TOKEN)
         raise ValueError(INVALID_TOKEN) from err
 
     user = await AuthService(db).get_user_by_id(int(user_id))
+    logger.debug("Token validated — user_id={}", user.id)
     return user.id

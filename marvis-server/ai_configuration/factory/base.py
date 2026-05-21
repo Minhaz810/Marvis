@@ -8,8 +8,8 @@ class AIClient(ABC):
 
     def __init__(self, api_key: str, model: str, max_tokens: int) -> None:
         """Initialise with credentials and the token budget for every request."""
-        self._api_key = api_key
-        self._model = model
+        self._api_key = api_key.strip()
+        self._model = model.strip()
         self._max_tokens = max_tokens
 
     @abstractmethod
