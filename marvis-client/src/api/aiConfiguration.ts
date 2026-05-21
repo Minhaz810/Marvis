@@ -75,3 +75,17 @@ export async function saveUserConfig(payload: {
   if (!res.ok) throw new Error('Failed to save config')
   return res.json() as Promise<UserAIConfig>
 }
+
+export async function updateUserConfig(payload: {
+  llm_model_id: number
+  api_key: string
+  max_tokens: number
+}): Promise<UserAIConfig> {
+  const res = await fetchWithAuth(`${BASE_URL}/api/v1/ai-configuration/config`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error('Failed to update config')
+  return res.json() as Promise<UserAIConfig>
+}
