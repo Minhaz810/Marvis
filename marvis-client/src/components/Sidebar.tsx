@@ -8,29 +8,29 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import type { ReactElement } from 'react'
+import { NavLink } from 'react-router-dom'
 import { MarvisLogo } from './MarvisLogo'
 
 interface NavItem {
   label: string
   icon: ReactElement
+  path: string | null
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Configure AI', icon: <Settings2 size={20} /> },
-  { label: 'Communication Channel', icon: <MessagesSquare size={20} /> },
-  { label: 'Access Management', icon: <ShieldCheck size={20} /> },
-  { label: 'Scheduler', icon: <CalendarDays size={20} /> },
-  { label: 'Chat', icon: <MessageCircle size={20} /> },
+  { label: 'Configure AI', icon: <Settings2 size={20} />, path: '/dashboard/configure-ai' },
+  { label: 'Communication Channel', icon: <MessagesSquare size={20} />, path: null },
+  { label: 'Access Management', icon: <ShieldCheck size={20} />, path: null },
+  { label: 'Scheduler', icon: <CalendarDays size={20} />, path: null },
+  { label: 'Chat', icon: <MessageCircle size={20} />, path: '/dashboard/chat' },
 ]
 
 interface SidebarProps {
   collapsed: boolean
   onToggle: () => void
-  activeItem: string
-  onNavClick: (label: string) => void
 }
 
-export function Sidebar({ collapsed, onToggle, activeItem, onNavClick }: SidebarProps): ReactElement {
+export function Sidebar({ collapsed, onToggle }: SidebarProps): ReactElement {
   return (
     <aside
       className="relative flex flex-col h-screen bg-gray-900 border-r border-gray-800 transition-all duration-300 shrink-0"
@@ -58,26 +58,49 @@ export function Sidebar({ collapsed, onToggle, activeItem, onNavClick }: Sidebar
 
       {/* Nav items */}
       <nav className="flex-1 py-4 overflow-hidden">
-        {NAV_ITEMS.map(({ label, icon }) => {
-          const isActive = activeItem === label
+        {NAV_ITEMS.map(({ label, icon, path }) => {
+          const baseClass =
+            'w-full flex items-center gap-3 px-4 py-3 transition-colors group cursor-pointer border-l-2'
+          const activeClass = 'border-cyan-400 bg-cyan-500/10 text-cyan-400'
+          const inactiveClass =
+            'border-transparent text-gray-400 hover:text-white hover:bg-gray-800'
+
+          if (path === null) {
+            return (
+              <button
+                key={label}
+                disabled
+                title={collapsed ? label : undefined}
+                className={`${baseClass} ${inactiveClass} opacity-40 cursor-not-allowed`}
+              >
+                <span className="shrink-0">{icon}</span>
+                {!collapsed && <span className="text-sm whitespace-nowrap">{label}</span>}
+              </button>
+            )
+          }
+
           return (
-            <button
+            <NavLink
               key={label}
-              onClick={() => { onNavClick(label) }}
-              className={`w-full flex items-center gap-3 px-4 py-3 transition-colors group cursor-pointer border-l-2 ${
-                isActive
-                  ? 'border-cyan-400 bg-cyan-500/10 text-cyan-400'
-                  : 'border-transparent text-gray-400 hover:text-white hover:bg-gray-800'
-              }`}
+              to={path}
               title={collapsed ? label : undefined}
+              className={({ isActive }) =>
+                `${baseClass} ${isActive ? activeClass : inactiveClass}`
+              }
             >
-              <span className={`shrink-0 transition-colors ${isActive ? 'text-cyan-400' : 'group-hover:text-cyan-400'}`}>
-                {icon}
-              </span>
-              {!collapsed && (
-                <span className="text-sm whitespace-nowrap">{label}</span>
+              {({ isActive }) => (
+                <>
+                  <span
+                    className={`shrink-0 transition-colors ${isActive ? 'text-cyan-400' : 'group-hover:text-cyan-400'}`}
+                  >
+                    {icon}
+                  </span>
+                  {!collapsed && (
+                    <span className="text-sm whitespace-nowrap">{label}</span>
+                  )}
+                </>
               )}
-            </button>
+            </NavLink>
           )
         })}
       </nav>
