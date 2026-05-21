@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from loguru import logger
 
 from chatbot.constants import AI_ERROR, NO_AI_CONFIG
@@ -40,11 +40,10 @@ async def chat_websocket(websocket: WebSocket) -> None:
         try:
             await service.initialize()
             logger.info("ChatService initialized for user_id={}", user_id)
-        except Exception:
+        except Exception as e:
             logger.exception("Failed to initialize ChatService for user_id={}", user_id)
-            await websocket.send_text(
-                ErrorMessage(error=NO_AI_CONFIG).model_dump_json()
-            )
+            detail = e.detail if isinstance(e, HTTPException) else NO_AI_CONFIG
+            await websocket.send_text(ErrorMessage(error=detail).model_dump_json())
             await websocket.close()
             return
 
@@ -73,14 +72,14 @@ async def chat_websocket(websocket: WebSocket) -> None:
                             role="assistant", content=reply
                         ).model_dump_json()
                     )
-                except Exception:
+                except Exception as e:
                     logger.exception(
                         "AI call failed for user_id={} — message: {!r}",
                         user_id,
                         content,
                     )
                     await websocket.send_text(
-                        ErrorMessage(error=AI_ERROR).model_dump_json()
+                        ErrorMessage(error=str(e) or AI_ERROR).model_dump_json()
                     )
 
         except WebSocketDisconnect:
